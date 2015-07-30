@@ -6,9 +6,9 @@ using System.Collections.Generic;
 
 public enum NodeType : int
 {
-    
+    Temporary =-1,
     Normal =0,
-
+    Abstract = 1,
 }
 public class Node : IComparable<Node>
 {
@@ -110,14 +110,14 @@ public class Node : IComparable<Node>
     {
         previouseNode = newNode;
     }
-    /*public bool IsAbstract()
+    public bool IsAbstract()
     {
         return level == NodeType.Abstract;
     }
     public bool IsTemporary()
     {
         return level == NodeType.Temporary;
-    }*/
+    }
     //Used for Nodes in the ConnectionGrid
     /*public void SetClusterParent(NodeCluster newNodeCluster)
     {

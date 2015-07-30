@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-
+using SimplexNoise;
 
 
 public class SphereGrid : MonoBehaviour 
@@ -41,6 +41,13 @@ public class SphereGrid : MonoBehaviour
     private Node endNode;
     private GridAgent agent;
     public GameObject agentPrefab;
+
+    public MeshGenerator meshGen_BackFace;
+    public MeshGenerator meshGen_FrontFace;
+    public MeshGenerator meshGen_TopFace;
+    public MeshGenerator meshGen_BottomFace;
+    public MeshGenerator meshGen_RightFace;
+    public MeshGenerator meshGen_LeftFace;
 
 	void Start () 
     {
@@ -109,6 +116,12 @@ public class SphereGrid : MonoBehaviour
         CreateSphereFaces();
         SetNodeFaceParents();
         GenerateSpherePoints();
+        CreateSurface();
+        /*foreach (Node n in nodeDictionary.Values)
+        {
+            SpawnNodeVisual(n.GetLocation());
+        }*/
+        
 
         
         
@@ -153,18 +166,7 @@ public class SphereGrid : MonoBehaviour
             GameObject newVisual = Instantiate(nodeVisual, newPath[i].GetLocation(), Quaternion.identity) as GameObject;
         }
     }
-    /*private void SetCornerNodes()
-    {
-        cornerNodes.Add(LookUpNode(new Vector3(5.8f, 5.8f, 5.8f)));
-        cornerNodes.Add(LookUpNode(new Vector3(-5.8f, 5.8f, 5.8f)));
-        cornerNodes.Add(LookUpNode(new Vector3(5.8f, -5.8f, 5.8f)));
-        cornerNodes.Add(LookUpNode(new Vector3(-5.8f, -5.8f, 5.8f)));
-
-        cornerNodes.Add(LookUpNode(new Vector3(-5.8f, -5.8f, -5.8f)));
-        cornerNodes.Add(LookUpNode(new Vector3(5.8f, 5.8f, -5.8f)));
-        cornerNodes.Add(LookUpNode(new Vector3(-5.8f, 5.8f, -5.8f)));
-        cornerNodes.Add(LookUpNode(new Vector3(5.8f, -5.8f, -5.8f)));
-    }*/
+    
     private void CreateSphereFaces()
     {
         FaceType[] type = { FaceType.Top,FaceType.Bottom,FaceType.Right,FaceType.Left,FaceType.Front,FaceType.Back };
@@ -176,22 +178,129 @@ public class SphereGrid : MonoBehaviour
     }
     private void SetNodeFaceParents()
     {
-        foreach (Node n in tempNodeDictionary.Values)
+        int maxVal = SIZE / 2;
+        //Front
+        for (int i = -10; i <= 10; i++)
         {
-            int maxVal = SIZE/2;
-            if (n.GetLocation().y >= maxVal)
-                sphereFaceDictionary[FaceType.Top].ManageNodeList(n);
-            if(n.GetLocation().y<=-maxVal)
-                sphereFaceDictionary[FaceType.Bottom].ManageNodeList(n);
-            if (n.GetLocation().x >= maxVal)
-                sphereFaceDictionary[FaceType.Right].ManageNodeList(n);
-            if (n.GetLocation().x <= -maxVal)
-                sphereFaceDictionary[FaceType.Left].ManageNodeList(n);
-            if (n.GetLocation().z >= maxVal)
-                sphereFaceDictionary[FaceType.Front].ManageNodeList(n);
-            if (n.GetLocation().z <= -maxVal)
-                sphereFaceDictionary[FaceType.Back].ManageNodeList(n);
-
+            for (int j = -10; j <= 10; j++)
+            {
+                Vector3 key = new Vector3(i, j, 10);
+                if (tempNodeDictionary.ContainsKey(key))
+                {
+                    sphereFaceDictionary[FaceType.Front].ManageNodeList(tempNodeDictionary[key]);
+                }
+            }
+        }
+        //Back
+        for (int i = -10; i <= 10; i++)
+        {
+            for (int j = -10; j <= 10; j++)
+            {
+                Vector3 key = new Vector3(i, j,-10);
+                if (tempNodeDictionary.ContainsKey(key))
+                {
+                    sphereFaceDictionary[FaceType.Back].ManageNodeList(tempNodeDictionary[key]);
+                }
+            }
+        }
+        //Top
+        for (int i = -10; i <= 10; i++)
+        {
+            for (int j = -10; j <= 10; j++)
+            {
+                Vector3 key = new Vector3(i, 10, j);
+                if (tempNodeDictionary.ContainsKey(key))
+                {
+                    sphereFaceDictionary[FaceType.Top].ManageNodeList(tempNodeDictionary[key]);
+                }
+            }
+        }
+        //Bottom
+        for (int i = -10; i <= 10; i++)
+        {
+            for (int j = -10; j <= 10; j++)
+            {
+                Vector3 key = new Vector3(i, -10, j);
+                if (tempNodeDictionary.ContainsKey(key))
+                {
+                    sphereFaceDictionary[FaceType.Bottom].ManageNodeList(tempNodeDictionary[key]);
+                }
+            }
+        }
+        //Right
+        for (int i = -10; i <= 10; i++)
+        {
+            for (int j = -10; j <= 10; j++)
+            {
+                Vector3 key = new Vector3(10, i, j);
+                if (tempNodeDictionary.ContainsKey(key))
+                {
+                    sphereFaceDictionary[FaceType.Right].ManageNodeList(tempNodeDictionary[key]);
+                }
+            }
+        }
+        //Left
+        for (int i = -10; i <= 10; i++)
+        {
+            for (int j = -10; j <= 10; j++)
+            {
+                Vector3 key = new Vector3(-10, i, j);
+                if (tempNodeDictionary.ContainsKey(key))
+                {
+                    sphereFaceDictionary[FaceType.Left].ManageNodeList(tempNodeDictionary[key]);
+                }
+            }
+        }
+    }
+    private void CreateSurface()
+    {
+        meshGen_BackFace.SetX(SIZE);
+        meshGen_BackFace.SetZ(SIZE);
+        meshGen_BackFace.BeginBuild();
+        SphereFace newFace = sphereFaceDictionary[FaceType.Back];
+        for (int i = 0; i < newFace.nodeList.Count; i++)
+        {
+            meshGen_BackFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+        }
+        meshGen_FrontFace.SetX(SIZE);
+        meshGen_FrontFace.SetZ(SIZE);
+        meshGen_FrontFace.BeginBuild(false);
+        newFace = sphereFaceDictionary[FaceType.Front];
+        for (int i = 0; i < newFace.nodeList.Count; i++)
+        {
+            meshGen_FrontFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+        }
+        meshGen_TopFace.SetX(SIZE);
+        meshGen_TopFace.SetZ(SIZE);
+        meshGen_TopFace.BeginBuild();
+        newFace = sphereFaceDictionary[FaceType.Top];
+        for (int i = 0; i < newFace.nodeList.Count; i++)
+        {
+            meshGen_TopFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+        }
+        meshGen_BottomFace.SetX(SIZE);
+        meshGen_BottomFace.SetZ(SIZE);
+        meshGen_BottomFace.BeginBuild(false);
+        newFace = sphereFaceDictionary[FaceType.Bottom];
+        for (int i = 0; i < newFace.nodeList.Count; i++)
+        {
+            meshGen_BottomFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+        }
+        meshGen_RightFace.SetX(SIZE);
+        meshGen_RightFace.SetZ(SIZE);
+        meshGen_RightFace.BeginBuild(false);
+        newFace = sphereFaceDictionary[FaceType.Right];
+        for (int i = 0; i < newFace.nodeList.Count; i++)
+        {
+            meshGen_RightFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+        }
+        meshGen_LeftFace.SetX(SIZE);
+        meshGen_LeftFace.SetZ(SIZE);
+        meshGen_LeftFace.BeginBuild();
+        newFace = sphereFaceDictionary[FaceType.Left];
+        for (int i = 0; i < newFace.nodeList.Count; i++)
+        {
+            meshGen_LeftFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
         }
     }
     private SphereFace GetFace(Node newNode)
@@ -360,6 +469,10 @@ public class SphereGrid : MonoBehaviour
             newLocation.y = Round(newLocation.y, 1);
             newLocation.z = Round(newLocation.z, 1);
 
+            float addedNoise = SimplexNoise.Noise.Generate(newLocation.x, newLocation.y, newLocation.z);
+            float addedVal = .05f + .05f * addedNoise;
+            newLocation += (newLocation - transform.position) * addedVal;
+
             n.SetLocation(newLocation);
             if(!nodeDictionary.ContainsKey(newLocation))
                 nodeDictionary.Add(newLocation, n);
@@ -367,6 +480,7 @@ public class SphereGrid : MonoBehaviour
         }
         tempNodeDictionary.Clear();
     }
+    
     public static float Round(float value, int digits)
     {
         float mult = Mathf.Pow(10.0f, (float)digits);

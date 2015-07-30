@@ -46,11 +46,15 @@
 	</Reference>
   </ItemGroup>
   <ItemGroup>
+     <Compile Include="Assets\Scripts\CameraControl.cs" />
      <Compile Include="Assets\Scripts\Navigation\BinaryHeap.cs" />
      <Compile Include="Assets\Scripts\Navigation\GridAgent.cs" />
      <Compile Include="Assets\Scripts\Navigation\Node.cs" />
      <Compile Include="Assets\Scripts\Navigation\SphereFace.cs" />
      <Compile Include="Assets\Scripts\Navigation\SphereGrid.cs" />
+     <Compile Include="Assets\Scripts\Noise.cs" />
+     <Compile Include="Assets\Scripts\Procedural\MeshBuilder.cs" />
+     <Compile Include="Assets\Scripts\Procedural\MeshGenerator.cs" />
      <Compile Include="Assets\Scripts\Testing.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>C:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
