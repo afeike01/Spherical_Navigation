@@ -26,20 +26,21 @@ public class Node : IComparable<Node>
     public Node previouseNode;
     public bool visited = false;
 
-    public SphereGrid gridParent;
+    public Grid gridParent;
     //public SphereFace faceParent;
-    //public NodeCluster clusterParent;
+    public NodeCluster clusterParent;
 
-    public SphereGrid gridConnectingTo;
-    public Node nodeConnectingTo;
+    public List<Node> nodesConnectingTo;
 
     public NodeType level;
 
     private bool isTemporary = false;
-    
 
+    public Vector3 gridCoordinates;
+    public Vector3 cubeCoordinates;
+    public Vector3 sphereCoordinates;
 
-    public Node(SphereGrid newGrid, Vector3 location, NodeType nodeLevel,int num)
+    public Node(Grid newGrid, Vector3 location, NodeType nodeLevel, int num)
     {
         this.gridParent = newGrid;
         this.level = nodeLevel;
@@ -47,6 +48,10 @@ public class Node : IComparable<Node>
         this.yVal = location.y;
         this.zVal = location.z;
         this.nodeNum = num;
+
+        gridCoordinates = location;
+        cubeCoordinates = SphereGrid.GridToCubeCoordinates(this);
+        sphereCoordinates = SphereGrid.CubeToSphereCoordinates(cubeCoordinates);
     }
     public int CompareTo(Node newNode)
     {
@@ -94,9 +99,9 @@ public class Node : IComparable<Node>
     }
     public void SetH(Node goalNode)
     {
-        
-        Vector3 start = new Vector3(xVal, yVal, zVal);
-        Vector3 end = new Vector3(goalNode.xVal, goalNode.yVal, goalNode.zVal);
+        //TESTING
+        Vector3 start = cubeCoordinates;//new Vector3(xVal, yVal, zVal);
+        Vector3 end = goalNode.cubeCoordinates;// new Vector3(goalNode.xVal, goalNode.yVal, goalNode.zVal);
         h = Vector3.Distance(start, end);
     }
     public void Reset()
@@ -119,10 +124,21 @@ public class Node : IComparable<Node>
         return level == NodeType.Temporary;
     }
     //Used for Nodes in the ConnectionGrid
-    /*public void SetClusterParent(NodeCluster newNodeCluster)
+    public void SetClusterParent(NodeCluster newNodeCluster)
     {
         clusterParent = newNodeCluster;
-    }*/
+    }
+    public void ManageNodesConnectingTo(Node newNode)
+    {
+        if (nodesConnectingTo == null)
+        {
+            nodesConnectingTo = new List<Node>();
+        }
+        if (!nodesConnectingTo.Contains(newNode))
+        {
+            nodesConnectingTo.Add(newNode);
+        }
+    }
     /*public void SetFaceParent(SphereFace newFace)
     {
         faceParent = newFace;

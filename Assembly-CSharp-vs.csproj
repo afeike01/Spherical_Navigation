@@ -49,6 +49,11 @@
      <Compile Include="Assets\Scripts\CameraControl.cs" />
      <Compile Include="Assets\Scripts\Navigation\BinaryHeap.cs" />
      <Compile Include="Assets\Scripts\Navigation\GridAgent.cs" />
+     <Compile Include="Assets\Scripts\Navigation\HPAstar\AbstractGrid.cs" />
+     <Compile Include="Assets\Scripts\Navigation\HPAstar\ConnectionGrid.cs" />
+     <Compile Include="Assets\Scripts\Navigation\HPAstar\Grid.cs" />
+     <Compile Include="Assets\Scripts\Navigation\HPAstar\GridConnector.cs" />
+     <Compile Include="Assets\Scripts\Navigation\HPAstar\NodeCluster.cs" />
      <Compile Include="Assets\Scripts\Navigation\Node.cs" />
      <Compile Include="Assets\Scripts\Navigation\SphereFace.cs" />
      <Compile Include="Assets\Scripts\Navigation\SphereGrid.cs" />
