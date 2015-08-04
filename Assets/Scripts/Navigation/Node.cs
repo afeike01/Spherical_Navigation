@@ -27,7 +27,6 @@ public class Node : IComparable<Node>
     public bool visited = false;
 
     public Grid gridParent;
-    //public SphereFace faceParent;
     public NodeCluster clusterParent;
 
     public List<Node> nodesConnectingTo;

@@ -16,50 +16,17 @@ public enum Orientation : int
 public class Grid// : MonoBehaviour 
 {
     private BinaryHeap<Node> frontierHeap = new BinaryHeap<Node>();
-
-    private Vector3 startLocation;
-    private Vector3 currentLocation;
-
-    private const float spacing = 1;
-    private int nodeCounter = 0;
-
     private float gDist = 0;
     public float gDistInc = .01f;
 
     public Dictionary<Vector3, Node> initNodeDictionary = new Dictionary<Vector3, Node>();
-    private Dictionary<Vector3, Node> cubeNodeDictionary = new Dictionary<Vector3, Node>();
-    public Dictionary<Vector3, Node> sphereNodeDictionary = new Dictionary<Vector3, Node>();
-
-    //public Dictionary<int,Node> nodeDictionary = new Dictionary<int,Node>();
-    //public List<Node> permanentNodes = new List<Node>();
+    private int nodeCounter = 0;
 
     public int gridSize = 20;
     public Orientation gridOrientation;
 
     public int clusterSize = 10;
     public AbstractGrid abstractGrid;
-
-    List<Node> mainPath = new List<Node>();
-    List<GameObject> visuals = new List<GameObject>();
-    int currentIndex = 0;
-
-    public Vector2 n1;
-    public Vector2 n2;
-
-    private int visitCounter = 0;
-
-    public GameObject nodeVisual;
-    public GameObject nodeClusterVisual;
-    public GameObject nodeEntranceVisual;
-    public GameObject nodeUnavailableVisual;
-    public GameObject debugLocationVisual;
-    public GameObject connectionVisual;
-
-    public GameObject nodePrefab;
-    public GameObject permanentNodePrefab;
-    
-    
-
 
     public Grid(Orientation newOrientation, int newSize)
     {
@@ -75,147 +42,12 @@ public class Grid// : MonoBehaviour
         
         abstractGrid = CreateAbstractGrid();
         
-        return;
-        //================================================
-        //                  STOP HERE!
-        //================================================
-
-        /*for (int i = 0; i < connectors.Length; i++)
-        {
-            if(connectors[i]!=null)
-                connectors[i].SetAbstractGrid(this);
-        }*/
-
-        //connectionGrid.ManageGridList(this);
-
-        //SetPermanentNodes();
-        //CreatePhysicalNodes();
     }
-    private void SetPermanentNodes()
-    {
-        //TEMPORARY
-        /*int startX = (int)transform.position.x;
-        int currentX = startX;
-        bool toNewCluster = false;
-        while (currentX < startX + gridSize)
-        {
-            int increment = (toNewCluster) ? 1 : (clusterSize - 1);
-            for (int i = (int)transform.position.z; i < (int)transform.position.z + gridSize; i++)
-            {
-                Node newNode = LookUpNode(currentX, i);
-                if (newNode != null)
-                {
-                    newNode.SetPermanent(true);
-                    permanentNodes.Add(newNode);
-                    //GameObject newPrefab = Instantiate(nodePrefab, newNode.GetLocation(), Quaternion.identity) as GameObject;
-                }
-            }
-            currentX += increment;
-            toNewCluster = !toNewCluster;
-        }
-
-        int startZ = (int)transform.position.z;
-        int currentZ = startZ;
-        toNewCluster = false;
-        while (currentZ < startZ + gridSize)
-        {
-            int increment = (toNewCluster) ? 1 : (clusterSize - 1);
-            for (int i = (int)transform.position.x; i < (int)transform.position.x + gridSize; i++)
-            {
-                Node newNode = LookUpNode(i, currentZ);
-                if (newNode != null)
-                {
-                    newNode.SetPermanent(true);
-                    permanentNodes.Add(newNode);
-                    //GameObject newPrefab = Instantiate(nodePrefab, newNode.GetLocation(), Quaternion.identity) as GameObject;
-                }
-            }
-            currentZ += increment;
-            toNewCluster = !toNewCluster;
-        }*/
-        
-    }
-    private void CreatePhysicalNodes()
-    {
-        //TEMPORARY
-        /*foreach (Node n in nodeDictionary.Values)
-        {
-            SpawnPhysicalNode(n);
-        }*/
-    }
+    
+    
     private AbstractGrid CreateAbstractGrid()
     {
         return new AbstractGrid(this, clusterSize);
-    }
-
-    public void SpawnNodeClusterVisual(params NodeCluster[] newCluster)
-    {
-        for(int i =0;i<newCluster.Length;i++)
-        {
-            //GameObject newVisual = Instantiate(nodeClusterVisual, newCluster[i].GetLocation(), Quaternion.identity) as GameObject;
-        }
-    }
-    public static void VisualizePath(List<Node> path)
-    {
-        if (path != null)
-        {
-            for (int i = 0; i < path.Count; i++)
-            {
-                if (i == 0 || i == path.Count - 1)
-                    SpawnDebugLocationVisual(path[i]);
-                else
-                    SpawnNodeVisual(path[i]);
-            }
-        }
-        else
-        {
-            Debug.Log("Path is NULL");
-        }
-    }
-    private void SpawnPhysicalNode(Node newNode)
-    {
-        //TEMPORARY
-        /*GameObject newPhysicalNode;
-        if (newNode.IsPermanent())
-        {
-            newPhysicalNode = Instantiate(permanentNodePrefab, newNode.GetLocation(), Quaternion.identity) as GameObject;
-        }
-        else
-        {
-            newPhysicalNode = Instantiate(nodePrefab, newNode.GetLocation(), Quaternion.identity) as GameObject;
-        }*/
-    }
-    public static void SpawnNodeVisual(params Node[] nodes)
-    {
-        //TEMPORARY
-        /*for (int i = 0; i < nodes.Length; i++)
-        {
-            if (nodes[i] != null&&nodes[i].available)
-            {
-                GameObject newVisual;
-                if (!nodes[i].IsAbstract())
-                    newVisual = Instantiate(nodes[i].gridParent.nodeVisual, nodes[i].GetLocation(), Quaternion.identity) as GameObject;
-                else
-                    newVisual = Instantiate(nodes[i].gridParent.nodeEntranceVisual, nodes[i].GetLocation(), Quaternion.identity) as GameObject;
-            }
-            else if (nodes[i] != null && !nodes[i].available)
-            {
-                GameObject newVisual = Instantiate(nodes[i].gridParent.nodeUnavailableVisual, nodes[i].GetLocation(), Quaternion.identity) as GameObject;
-            }
-        }*/
-    }
-    public void SpawnNodeClusterVisual(Vector3 newLocation)
-    {
-        //GameObject newVisual = Instantiate(nodeClusterVisual, newLocation, Quaternion.identity) as GameObject;
-    }
-    public static void SpawnDebugLocationVisual(Node newNode)
-    {
-        //TEMPORARY
-        //GameObject newVisual = Instantiate(newNode.gridParent.debugLocationVisual, newNode.GetLocation(), Quaternion.identity) as GameObject;
-    }
-    public void SpawnConnectionVisual(Node newNode)
-    {
-        //GameObject newVisual = Instantiate(connectionVisual, newNode.GetLocation(), Quaternion.identity) as GameObject;
     }
     private void CreateNodes()
     {
@@ -232,6 +64,9 @@ public class Grid// : MonoBehaviour
         Vector3 newLocation = new Vector3(newX,0,tempZ);
         Node newNode = new Node(this,newLocation, NodeType.Normal,nodeCounter);
         initNodeDictionary.Add(newLocation, newNode);//nodeDictionary.Add(nodeKey, newNode);
+
+        
+
         nodeCounter++;
 
 
@@ -249,6 +84,9 @@ public class Grid// : MonoBehaviour
         Vector3 newLocation = new Vector3(newX, 0, newZ);
         Node newNode = new Node(this, newLocation, NodeType.Normal, nodeCounter);
         initNodeDictionary.Add(newLocation, newNode);//nodeDictionary.Add(nodeKey, newNode);
+
+        
+
         nodeCounter++;
     }
     public static Vector3 GetNodeKey(Node newNode)
@@ -525,7 +363,7 @@ public class Grid// : MonoBehaviour
 
                         if (countVisitedNodes)
                         {
-                            visitCounter++;
+                            //visitCounter++;
                         }
                             
                     }   

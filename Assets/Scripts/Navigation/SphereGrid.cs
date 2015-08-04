@@ -10,36 +10,19 @@ public class SphereGrid : MonoBehaviour
     public Dictionary<string, List<Node>> storedPathsDictionary = new Dictionary<string, List<Node>>();
     private BinaryHeap<Node> frontierHeap = new BinaryHeap<Node>();
 
-    private const float spacing = 1;
-    public int nodeCounter = 0;
+    private const int SIZE = 40;
+    private const float RADIUS = 10;
 
     private float gDist = 0;
     public float gDistInc = .01f;
 
+    public Dictionary<Orientation, Grid> gridDictionary = new Dictionary<Orientation, Grid>();
     public Dictionary<string, Node> nodeDictionary = new Dictionary<string, Node>();
-
-    //MAY NOT NEED THESE
-    private Dictionary<Vector3, Node> cubeNodeDictionary = new Dictionary<Vector3, Node>();
-    public Dictionary<Vector3, Node> sphereNodeDictionary = new Dictionary<Vector3, Node>();
-
-    //public int gridSize = 30;
-
+    public int nodeCounter = 0;
 
     public GameObject nodeVisual;
     public GameObject locationPrefab;
     public GameObject nodeClusterVisual;
-
-    private const int SIZE = 20;
-    private const float RADIUS = 10;
-
-    private List<Vector3> cubeCoordinates = new List<Vector3>();
-    private List<Vector3> sphereCoordinates = new List<Vector3>();
-
-    public SphereCollider planetCollider;
-
-    public Dictionary<Orientation, Grid> gridDictionary = new Dictionary<Orientation, Grid>();
-    public Dictionary<FaceType, SphereFace> sphereFaceDictionary = new Dictionary<FaceType, SphereFace>();
-    public List<Node> cornerNodes = new List<Node>();
 
     private GridAgent agent;
     public GameObject agentPrefab;
@@ -51,17 +34,15 @@ public class SphereGrid : MonoBehaviour
     public MeshGenerator meshGen_RightFace;
     public MeshGenerator meshGen_LeftFace;
 
-
-
+    private Node startNode;
+    private Node endNode;
     private int index = 0;
     private List<Node> mainPath = new List<Node>();
 
 	void Start () 
     {
         InitializeGrid();
-        /*
-         * Bring ConnectionGrid functionality to SphereGrid!!!!!!!!!!!!!!!!!!!!!!!!
-         */ 
+        
 	}
     void Update()
     {
@@ -72,9 +53,30 @@ public class SphereGrid : MonoBehaviour
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit))
             {
-                if (hit.collider == planetCollider)
+                
+                if (hit.collider.gameObject.GetComponent<MeshCollider>())
                 {
                     
+                    Node newNode = GetClosestNode(hit.point);
+                    SpawnNodeVisual(newNode.sphereCoordinates);
+                    SpawnLocationVisual(hit.point);
+
+                    if (startNode == null)
+                    {
+                        startNode = newNode;
+                    }
+                    else if (endNode == null)
+                    {
+                        endNode = newNode;
+
+                        mainPath = FindSpherePath(startNode, endNode);
+                        for (int i = 0; i < mainPath.Count; i++)
+                        {
+                            SpawnNodeVisual(mainPath[i].sphereCoordinates);
+                        }
+                        startNode = null;
+                        endNode = null;
+                    }
                     
                 }
             }
@@ -89,75 +91,11 @@ public class SphereGrid : MonoBehaviour
     }
     private void InitializeGrid()
     {
-        //CreateHeightMap();
-        GenerateCubePoints();
         CreateGrids();
         SetAllGridConnections();
         SetConnectionNodeNeighbors();
         SetConnections();
-
-        /*
-         * CURRENT:
-         *  Have created all Grids
-         *  All Grids are Initialized as a normal Grid (as in previous projects) for simplicity
-         *  
-         * To Do:
-         *  
-         */
-
-        //return;
-
-
-        Node startNode = gridDictionary[Orientation.Front].LookUpNode(7,4);
-        Node endNode = gridDictionary[Orientation.Back].LookUpNode(3,3);
-
-        SpawnLocationVisual(startNode.sphereCoordinates);
-        SpawnLocationVisual(endNode.sphereCoordinates);
-
-        mainPath = FindMultiGridPath(startNode,endNode);
-        
-
-
-
-        return;
-        
-
-        //AssignAllNeighboors();
-        //CreateSphereFaces();
-        //SetNodeFaceParents();
-        //GenerateSpherePoints();
         CreateSurface();
-
-        
-        /*foreach (Node n in sphereNodeDictionary.Values)
-        {
-            SpawnNodeVisual(n.GetLocation());
-        }*/
-        
-
-        
-        
-    
-        
-
-        /*int newX = (int)transform.position.x;
-        for (int i = 0; i < gridSize; ++i)
-        {
-            SpawnX(newX);
-            newX++;
-        }*/
-        
-        //abstractGrid = CreateAbstractGrid();
-
-        /*for (int i = 0; i < connectors.Length; i++)
-        {
-            if(connectors[i]!=null)
-                connectors[i].SetAbstractGrid(this);
-        }
-
-        connectionGrid.ManageGridList(this);*/
-
-
     }
     public static Vector3 GridToCubeCoordinates(Node newNode)
     {
@@ -218,20 +156,25 @@ public class SphereGrid : MonoBehaviour
         newPoint.y = Round(newPoint.y, 1);
         newPoint.z = Round(newPoint.z, 1);
 
-        /*float noiseDensity = 2f;
-        Vector3 v = newPoint;
-        v.Scale(new Vector3(noiseDensity, noiseDensity, noiseDensity));
-        float scale = .15f;
-        float noise = Noise.Noise.GetOctaveNoise(v.x, v.y, v.z, 4) * scale;
-        float factor = 1f - (scale / 2f) + noise;
+        float gain = 0.65f;
+        float lacunarity = 1.86f;
+        int octaves = 5;
+        float total = 0.0f;
+        float frequency = 1.0f / (float)SIZE;
+        float amplitude = gain;
+        for(int i = 0;i<octaves;++i)
+        {
+            total += Noise.Noise.GetOctaveNoise(newPoint.x * frequency, newPoint.y * frequency, newPoint.z * frequency, octaves) * amplitude;
+            frequency *= lacunarity;
+            amplitude *= gain;
+        }
 
-        newPoint += newPoint * addedNoise*.1f;//(newPoint - transform.position) * addedNoise*.05f;
-        newPoint = Vector3.Scale(newPoint, new Vector3(factor, factor, factor));*/
 
+        newPoint+= newPoint*total;
         return newPoint;
     }
     //NEEDS REFINEMENT
-    public static Vector3 RawSphereCoordinateToRawCubeCoordinate(Vector3 sphereCoordinate)
+    /*public static Vector3 RawSphereCoordinateToRawCubeCoordinate(Vector3 sphereCoordinate)
     {
         Vector3 position = new Vector3(sphereCoordinate.x,sphereCoordinate.y,sphereCoordinate.z);
 
@@ -352,7 +295,7 @@ public class SphereGrid : MonoBehaviour
                 return position;
             }
         }
-    }
+    }*/
     private void SpawnNodeVisual(Vector3 newLocation)
     {
         GameObject newVisual = Instantiate(nodeVisual, newLocation, Quaternion.identity) as GameObject;
@@ -361,27 +304,7 @@ public class SphereGrid : MonoBehaviour
     {
         GameObject newVisual = Instantiate(locationPrefab, newLocation, Quaternion.identity) as GameObject;
     }
-    private void SpawnNodeClusterVisual(Vector3 newLocation)
-    {
-        GameObject newVisual = Instantiate(nodeClusterVisual, newLocation, Quaternion.identity) as GameObject;
-    }
-    private void VisualizePath(List<Node> newPath)
-    {
-        for (int i = 0; i < newPath.Count; i++)
-        {
-            GameObject newVisual = Instantiate(nodeVisual, newPath[i].GetLocation(), Quaternion.identity) as GameObject;
-        }
-    }
-    
-    private void CreateSphereFaces()
-    {
-        FaceType[] type = { FaceType.Top,FaceType.Bottom,FaceType.Right,FaceType.Left,FaceType.Front,FaceType.Back };
-        for (int i = 0; i < type.Length; i++)
-        {
-            SphereFace newFace = new SphereFace(type[i]);
-            sphereFaceDictionary.Add(type[i], newFace);
-        }
-    }
+
     private void CreateGrids()
     {
         Orientation[] gridOrientations = { Orientation.Top, Orientation.Bottom, Orientation.Right, Orientation.Left, Orientation.Front, Orientation.Back };
@@ -392,345 +315,253 @@ public class SphereGrid : MonoBehaviour
         }
         
     }
-    private void SetNodeFaceParents()
-    {
-        /*int maxVal = SIZE / 2;
-        //Front
-        for (int i = -maxVal; i <= maxVal; i++)
-        {
-            for (int j = -maxVal; j <= maxVal; j++)
-            {
-                Vector3 key = new Vector3(i, j, maxVal);
-                if (cubeNodeDictionary.ContainsKey(key))
-                {
-                    sphereFaceDictionary[FaceType.Front].ManageNodeList(cubeNodeDictionary[key]);
-                }
-            }
-        }
-        //Back
-        for (int i = -maxVal; i <= maxVal; i++)
-        {
-            for (int j = -maxVal; j <= maxVal; j++)
-            {
-                Vector3 key = new Vector3(i, j, -maxVal);
-                if (cubeNodeDictionary.ContainsKey(key))
-                {
-                    sphereFaceDictionary[FaceType.Back].ManageNodeList(cubeNodeDictionary[key]);
-                }
-            }
-        }
-        //Top
-        for (int i = -maxVal; i <= maxVal; i++)
-        {
-            for (int j = -maxVal; j <= maxVal; j++)
-            {
-                Vector3 key = new Vector3(i, maxVal, j);
-                if (cubeNodeDictionary.ContainsKey(key))
-                {
-                    sphereFaceDictionary[FaceType.Top].ManageNodeList(cubeNodeDictionary[key]);
-                }
-            }
-        }
-        //Bottom
-        for (int i = -maxVal; i <= maxVal; i++)
-        {
-            for (int j = -maxVal; j <= maxVal; j++)
-            {
-                Vector3 key = new Vector3(i, -maxVal, j);
-                if (cubeNodeDictionary.ContainsKey(key))
-                {
-                    sphereFaceDictionary[FaceType.Bottom].ManageNodeList(cubeNodeDictionary[key]);
-                }
-            }
-        }
-        //Right
-        for (int i = -maxVal; i <= maxVal; i++)
-        {
-            for (int j = -maxVal; j <= maxVal; j++)
-            {
-                Vector3 key = new Vector3(maxVal, i, j);
-                if (cubeNodeDictionary.ContainsKey(key))
-                {
-                    sphereFaceDictionary[FaceType.Right].ManageNodeList(cubeNodeDictionary[key]);
-                }
-            }
-        }
-        //Left
-        for (int i = -maxVal; i <= maxVal; i++)
-        {
-            for (int j = -maxVal; j <= maxVal; j++)
-            {
-                Vector3 key = new Vector3(-maxVal, i, j);
-                if (cubeNodeDictionary.ContainsKey(key))
-                {
-                    sphereFaceDictionary[FaceType.Left].ManageNodeList(cubeNodeDictionary[key]);
-                }
-            }
-        }*/
-    }
     private void CreateSurface()
     {
-        meshGen_BackFace.SetX(SIZE);
-        meshGen_BackFace.SetZ(SIZE);
+        meshGen_BackFace.SetX(SIZE-1);
+        meshGen_BackFace.SetZ(SIZE-1);
         meshGen_BackFace.BeginBuild();
-        SphereFace newFace = sphereFaceDictionary[FaceType.Back];
-        for (int i = 0; i < newFace.nodeList.Count; i++)
+        Grid newGrid = gridDictionary[Orientation.Back];
+        int i = 0;
+        foreach (Node n in newGrid.initNodeDictionary.Values)
         {
-            meshGen_BackFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+            meshGen_BackFace.UpdateMesh(i, n.sphereCoordinates);
+            i++;
         }
-        meshGen_FrontFace.SetX(SIZE);
-        meshGen_FrontFace.SetZ(SIZE);
-        meshGen_FrontFace.BeginBuild(false);
-        newFace = sphereFaceDictionary[FaceType.Front];
-        for (int i = 0; i < newFace.nodeList.Count; i++)
+        meshGen_BackFace.gameObject.AddComponent<MeshCollider>();
+
+        meshGen_FrontFace.SetX(SIZE-1);
+        meshGen_FrontFace.SetZ(SIZE-1);
+        meshGen_FrontFace.BeginBuild();
+        newGrid = gridDictionary[Orientation.Front];
+        i = 0;
+        foreach (Node n in newGrid.initNodeDictionary.Values)
         {
-            meshGen_FrontFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+            meshGen_FrontFace.UpdateMesh(i, n.sphereCoordinates);
+            i++;
         }
-        meshGen_TopFace.SetX(SIZE);
-        meshGen_TopFace.SetZ(SIZE);
+        meshGen_FrontFace.gameObject.AddComponent<MeshCollider>();
+
+        meshGen_TopFace.SetX(SIZE-1);
+        meshGen_TopFace.SetZ(SIZE-1);
         meshGen_TopFace.BeginBuild();
-        newFace = sphereFaceDictionary[FaceType.Top];
-        for (int i = 0; i < newFace.nodeList.Count; i++)
+        newGrid = gridDictionary[Orientation.Top];
+        i = 0;
+        foreach (Node n in newGrid.initNodeDictionary.Values)
         {
-            meshGen_TopFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+            meshGen_TopFace.UpdateMesh(i, n.sphereCoordinates);
+            i++;
         }
-        meshGen_BottomFace.SetX(SIZE);
-        meshGen_BottomFace.SetZ(SIZE);
+        meshGen_TopFace.gameObject.AddComponent<MeshCollider>();
+
+        meshGen_BottomFace.SetX(SIZE-1);
+        meshGen_BottomFace.SetZ(SIZE-1);
         meshGen_BottomFace.BeginBuild(false);
-        newFace = sphereFaceDictionary[FaceType.Bottom];
-        for (int i = 0; i < newFace.nodeList.Count; i++)
+        newGrid = gridDictionary[Orientation.Bottom];
+        i = 0;
+        foreach (Node n in newGrid.initNodeDictionary.Values)
         {
-            meshGen_BottomFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+            meshGen_BottomFace.UpdateMesh(i, n.sphereCoordinates);
+            i++;
         }
-        meshGen_RightFace.SetX(SIZE);
-        meshGen_RightFace.SetZ(SIZE);
-        meshGen_RightFace.BeginBuild(false);
-        newFace = sphereFaceDictionary[FaceType.Right];
-        for (int i = 0; i < newFace.nodeList.Count; i++)
+        meshGen_BottomFace.gameObject.AddComponent<MeshCollider>();
+
+        meshGen_RightFace.SetX(SIZE-1);
+        meshGen_RightFace.SetZ(SIZE-1);
+        meshGen_RightFace.BeginBuild();
+        newGrid = gridDictionary[Orientation.Right];
+        i = 0;
+        foreach (Node n in newGrid.initNodeDictionary.Values)
         {
-            meshGen_RightFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+            meshGen_RightFace.UpdateMesh(i, n.sphereCoordinates);
+            i++;
         }
-        meshGen_LeftFace.SetX(SIZE);
-        meshGen_LeftFace.SetZ(SIZE);
+        meshGen_RightFace.gameObject.AddComponent<MeshCollider>();
+
+        meshGen_LeftFace.SetX(SIZE-1);
+        meshGen_LeftFace.SetZ(SIZE-1);
         meshGen_LeftFace.BeginBuild();
-        newFace = sphereFaceDictionary[FaceType.Left];
-        for (int i = 0; i < newFace.nodeList.Count; i++)
+        newGrid = gridDictionary[Orientation.Left];
+        i = 0;
+        foreach (Node n in newGrid.initNodeDictionary.Values)
         {
-            meshGen_LeftFace.UpdateMesh(i, newFace.nodeList[i].GetLocation());
+            meshGen_LeftFace.UpdateMesh(i, n.sphereCoordinates);
+            i++;
         }
-    }
-    private SphereFace GetFace(Node newNode)
-    {
-        Vector3 newLocation = newNode.GetLocation();
-
-        Vector3 cubeNodeLocation = new Vector3(SIZE / 2, SIZE / 2, SIZE / 2);
-
-        Node cubeNode = GetCubeNode(cubeNodeLocation);
-
-        float maxVal = cubeNode.GetLocation().x;
-
-        //float PREVIOUS_NUM = 5.8f;
-
-        if (newLocation.y >= maxVal)
-        {
-            //TopFace
-            return sphereFaceDictionary[FaceType.Top];
-        }
-        if (newLocation.y <= -maxVal)
-        {
-            //BottomFace
-            return sphereFaceDictionary[FaceType.Bottom];
-        }
-        if (newLocation.x >= maxVal)
-        {
-            //RightFace
-            return sphereFaceDictionary[FaceType.Right];
-        }
-        if (newLocation.x <= -maxVal)
-        {
-            //LeftFace
-            return sphereFaceDictionary[FaceType.Left];
-        }
-        if (newLocation.z >= maxVal)
-        {
-            //FrontFace
-            return sphereFaceDictionary[FaceType.Front];
-        }
-        if (newLocation.z <= -maxVal)
-        {
-            //BackFace
-            return sphereFaceDictionary[FaceType.Back];
-        }
-        else
-            return null;
-
+        meshGen_LeftFace.gameObject.AddComponent<MeshCollider>();
     }
     private Node GetClosestNode(Vector3 newLocation)
     {
-        SphereFace newFace = GetFace(newLocation);
-        float closestDist = Vector3.Distance(newLocation, newFace.nodeList[0].GetLocation());
-        Node closestNode = newFace.nodeList[0];
-        for (int i = 0; i < newFace.nodeList.Count; i++)
+        Grid newGrid = GetGridFrontLocationOnSphere(newLocation);
+        NodeCluster newCluster = GetNodeClusterFromGridAndLocation(newLocation, newGrid);
+        Node newNode = GetNodeFromNodeClusterAndLocation(newLocation, newCluster);
+        return newNode;
+    }
+    private Grid GetGridFrontLocationOnSphere(Vector3 newLocation)
+    {
+        //COULD USE A LOT OF WORK
+
+        //Front
+        Grid frontGrid = gridDictionary[Orientation.Front];
+        float maxZFront = frontGrid.LookUpNode(0, 0).sphereCoordinates.z;
+        float minXFrontBack = frontGrid.LookUpNode(0, (frontGrid.gridSize/2)-1).sphereCoordinates.x;
+        float maxXFrontBack = frontGrid.LookUpNode(frontGrid.gridSize - 1, (frontGrid.gridSize / 2) - 1).sphereCoordinates.x;
+        float minYFrontBack = frontGrid.LookUpNode((frontGrid.gridSize / 2) - 1, 0).sphereCoordinates.y;
+        float maxYFrontBack = frontGrid.LookUpNode((frontGrid.gridSize / 2) - 1, frontGrid.gridSize-1).sphereCoordinates.y;
+
+        //Back
+        Grid backGrid = gridDictionary[Orientation.Back];
+        float minZBack = backGrid.LookUpNode(0,0).sphereCoordinates.z;
+
+
+        //Top
+        Grid topGrid = gridDictionary[Orientation.Top];
+        float minYTop = topGrid.LookUpNode(0,0).sphereCoordinates.y;
+        float minXTopBottom = topGrid.LookUpNode(0, (topGrid.gridSize / 2) - 1).sphereCoordinates.x;
+        float maxXTopBottom = topGrid.LookUpNode(topGrid.gridSize-1,(topGrid.gridSize / 2) - 1).sphereCoordinates.x;
+        float minZTopBottom = topGrid.LookUpNode((topGrid.gridSize / 2) - 1, 0).sphereCoordinates.z;
+        float maxZTopBottom = topGrid.LookUpNode((topGrid.gridSize / 2) - 1, topGrid.gridSize-1).sphereCoordinates.z;
+
+        //Bottom
+        Grid bottomGrid = gridDictionary[Orientation.Bottom];
+        float maxYBottom = bottomGrid.LookUpNode(0,0).sphereCoordinates.y;
+
+        //Left
+        Grid leftGrid = gridDictionary[Orientation.Left];
+        float maxXLeft = leftGrid.LookUpNode(0, 0).sphereCoordinates.x;
+        
+        //Right
+        Grid rightGrid = gridDictionary[Orientation.Right];
+        float minXRight = rightGrid.LookUpNode(0, 0).sphereCoordinates.x;
+        float minYRightLeft = rightGrid.LookUpNode((rightGrid.gridSize/2)-1,0).sphereCoordinates.y;
+        float maxYRightLeft = rightGrid.LookUpNode((rightGrid.gridSize / 2) - 1, rightGrid.gridSize-1).sphereCoordinates.y;
+        float minZRightLeft = rightGrid.LookUpNode(0, (rightGrid.gridSize / 2) - 1).sphereCoordinates.z;
+        float maxZRightLeft = rightGrid.LookUpNode(rightGrid.gridSize - 1, (rightGrid.gridSize / 2) - 1).sphereCoordinates.z;
+
+        float x = newLocation.x;
+        float y = newLocation.y;
+        float z = newLocation.z;
+
+        Grid newGrid=null;
+
+        if (y >= minYTop)
         {
-            float tempDist = Vector3.Distance(newLocation, newFace.nodeList[i].GetLocation());
+            if (x >= minXTopBottom && x <= maxXTopBottom)
+            {
+                if (z >= minZTopBottom && z <= maxZTopBottom)
+                {
+                    //Top
+                    newGrid= gridDictionary[Orientation.Top];
+                }
+
+            }
+            
+        }
+        if (y <= maxYBottom)
+        {
+            if (x >= minXTopBottom && x <= maxXTopBottom)
+            {
+                if (z >= minZTopBottom && z <= maxZTopBottom)
+                {
+                    //Bottom
+                    newGrid = gridDictionary[Orientation.Bottom];
+                }
+
+            }
+        }
+        if (z <= maxZFront)
+        {
+            if (x >= minXFrontBack && x <= maxXFrontBack)
+            {
+                if (y >= minYFrontBack && y <= maxYFrontBack)
+                {
+                    //Front
+                    newGrid = gridDictionary[Orientation.Front];
+                }
+                
+            }
+             
+        }
+        if (z >= minZBack)
+        {
+           
+            if (x >= minXFrontBack && x <= maxXFrontBack)
+            {
+                if (y >= minYFrontBack && y <= maxYFrontBack)
+                {
+                    //Back
+                    newGrid = gridDictionary[Orientation.Back];
+                }
+                
+            }
+            
+        }
+        if (x >= minXRight)
+        {
+            if (z >= minZRightLeft && z <= maxZRightLeft)
+            {
+                if (y >= minYRightLeft && y <= maxYRightLeft)
+                {
+                    //Right
+                    newGrid = gridDictionary[Orientation.Right];
+                }
+
+            }
+            
+        }
+        if (x <= maxXLeft)
+        {
+            if (z >= minZRightLeft && z <= maxZRightLeft)
+            {
+                if (y >= minYRightLeft && y <= maxYRightLeft)
+                {
+                    //Left
+                    newGrid = gridDictionary[Orientation.Left];
+                }
+
+            }
+            
+        }
+        
+        return newGrid;
+    }
+    private NodeCluster GetNodeClusterFromGridAndLocation(Vector3 newLocation, Grid newGrid)
+    {
+        NodeCluster closestCluster = null;
+        float closestDist = 1000000;
+        foreach (NodeCluster newCluster in newGrid.abstractGrid.nodeClusterDictionary.Values)
+        {
+            float tempDist = Vector3.Distance(newLocation, newCluster.centerSphereCoordinates);
             if (tempDist < closestDist)
             {
                 closestDist = tempDist;
-                closestNode = newFace.nodeList[i];
+                closestCluster = newCluster;
+            }
+        }
+        return closestCluster;
+    }
+    private Node GetNodeFromNodeClusterAndLocation(Vector3 newLocation, NodeCluster newCluster)
+    {
+        Vector3 startLocation = newCluster.gridCoordinates;
+        Vector3 endLocation = newCluster.gridCoordinates + new Vector3(newCluster.clusterSize, newCluster.clusterSize, newCluster.clusterSize);
+
+        Node closestNode = null;
+        Grid newGrid = newCluster.mainAbstractGrid.mainGrid;
+        float closestDist = 100000000;
+        for (int i = (int)startLocation.x; i < endLocation.x; i++)
+        {
+            for (int j = (int)startLocation.z; j < endLocation.z; j++)
+            {
+                Node tempNode = newGrid.LookUpNode(i, j);
+                float tempDist = Vector3.Distance(newLocation, tempNode.sphereCoordinates);
+                if (tempDist < closestDist)
+                {
+                    closestDist = tempDist;
+                    closestNode = tempNode;
+                }
             }
         }
         return closestNode;
     }
-    private SphereFace GetFace(Vector3 newLocation)
-    {
-
-        if (newLocation.y >= 5.8f)
-        {
-            //TopFace
-            return sphereFaceDictionary[FaceType.Top];
-        }
-        else if (newLocation.y <= -5.8f)
-        {
-            //BottomFace
-            return sphereFaceDictionary[FaceType.Bottom];
-        }
-        else if (newLocation.x >= 5.8f)
-        {
-            //RightFace
-            return sphereFaceDictionary[FaceType.Right];
-        }
-        else if (newLocation.x <= -5.8f)
-        {
-            //LeftFace
-            return sphereFaceDictionary[FaceType.Left];
-        }
-        else if (newLocation.z >= 5.8f)
-        {
-            //FrontFace
-            return sphereFaceDictionary[FaceType.Front];
-        }
-        else if (newLocation.z <= -5.8f)
-        {
-            //BackFace
-            return sphereFaceDictionary[FaceType.Back];
-        }
-        else
-            return null;
-
-    }
-    private Node GetSphereNodeFromCubeNode(Node newCubeNode)
-    {
-        Vector3 sphereNodeLocation = CubeToSphereCoordinates(newCubeNode.cubeCoordinates);
-        return GetSphereNode(sphereNodeLocation);
-    }
-    private Node GetCubeNode(Vector3 newLocation)
-    {
-        if (cubeNodeDictionary.ContainsKey(newLocation))
-        {
-            return cubeNodeDictionary[newLocation];
-        }
-        else
-            return null;
-    }
-    private Node GetSphereNode(Vector3 newLocation)
-    {
-        if (sphereNodeDictionary.ContainsKey(newLocation))
-        {
-            return sphereNodeDictionary[newLocation];
-        }
-        else
-            return null;
-    }
-    private void GenerateCubePoints()
-    {
-        //TEMPORARY!!!
-
-        /*int minVal = -(SIZE / 2);
-        int maxVal = SIZE / 2;
-
-        //Front Face
-        for (int i = minVal; i <= maxVal; i++)
-        {
-            for (int j = minVal; j <= maxVal; j++)
-            {
-                cubeCoordinates.Add(new Vector3(i, j, minVal));
-            }
-        }
-        //Back Face
-        for (int i = minVal; i <= maxVal; i++)
-        {
-            for (int j = minVal; j <= maxVal; j++)
-            {
-                cubeCoordinates.Add(new Vector3(i, j, maxVal));
-            }
-        }
-        //Left Face
-        for (int i = minVal; i <= maxVal; i++)
-        {
-            for (int j = minVal; j <= maxVal; j++)
-            {
-                cubeCoordinates.Add(new Vector3(minVal, i, j));
-            }
-        }
-        //Right Face
-        for (int i = minVal; i <= maxVal; i++)
-        {
-            for (int j = minVal; j <= maxVal; j++)
-            {
-                cubeCoordinates.Add(new Vector3(maxVal, i, j));
-            }
-        }
-        //Top Face
-        for (int i = minVal; i <= maxVal; i++)
-        {
-            for (int j = minVal; j <= maxVal; j++)
-            {
-                cubeCoordinates.Add(new Vector3(i, maxVal, j));
-            }
-        }
-        //Bottom Face
-        for (int i = minVal; i <= maxVal; i++)
-        {
-            for (int j = minVal; j <= maxVal; j++)
-            {
-                cubeCoordinates.Add(new Vector3(i, minVal, j));
-            }
-        }
-        for (int i = 0; i < cubeCoordinates.Count; i++)
-        {
-            if (!cubeNodeDictionary.ContainsKey(cubeCoordinates[i]))
-            {
-                
-                Node newNode = new Node(this, cubeCoordinates[i], NodeType.Normal, nodeCounter);
-                cubeNodeDictionary.Add(cubeCoordinates[i], newNode);
-                nodeCounter++;
-            }
-        }*/
-    }
-    private void GenerateSpherePoints()
-    {
-        foreach (Node n in cubeNodeDictionary.Values)
-        {
-            //Temporarily disabled!
-            Vector3 newLocation = n.GetLocation();//CubeToSphereCoordinates(n.GetLocation());
-
-
-            /*newLocation.x = Round(newLocation.x, 1);
-            newLocation.y = Round(newLocation.y, 1);
-            newLocation.z = Round(newLocation.z, 1);
-
-            float addedNoise = SimplexNoise.Noise.Generate(newLocation.x, newLocation.y, newLocation.z);
-            float addedVal = .05f+.05f * addedNoise;
-            newLocation += (newLocation - transform.position) * addedVal;*/
-
-            n.SetLocation(newLocation);
-            if(!sphereNodeDictionary.ContainsKey(newLocation))
-                sphereNodeDictionary.Add(newLocation, n);
-            //SpawnNodeVisual(n.GetLocation());
-        }
-        //tempNodeDictionary.Clear();
-    }
-    
     public static float Round(float value, int digits)
     {
         float mult = Mathf.Pow(10.0f, (float)digits);
@@ -794,12 +625,6 @@ public class SphereGrid : MonoBehaviour
         }
 
     }
-    
-    
-    
-    
-    
-    
     public static string GetNodeKey(Node newNode)
     {
         string key = newNode.cubeCoordinates.ToString() + newNode.gridParent.gridOrientation.ToString();
@@ -812,25 +637,6 @@ public class SphereGrid : MonoBehaviour
         else
             return null;
     }
-    
-    
-    
-   
-    
-   
-   
-    
-    
-    private void ResetGrid()
-    {
-        foreach (Node n in sphereNodeDictionary.Values)
-        {
-            n.Reset();
-        }
-        frontierHeap.Clear();
-        
-    }
-    
     private void SetAllGridConnections()
     {
         foreach (Grid currentGrid in gridDictionary.Values)
@@ -950,7 +756,7 @@ public class SphereGrid : MonoBehaviour
             storedPathsDictionary.Add(connectionKey, newPath);
         }
     }
-    public List<Node> FindMultiGridPath(Node startNode, Node endNode)
+    public List<Node> FindSpherePath(Node startNode, Node endNode)
     {
         List<Node> newPath = new List<Node>();
 
@@ -1156,26 +962,4 @@ public class SphereGrid : MonoBehaviour
         }
 
     }
-    /*public bool ToggleNodeAvailability(Node newNode, bool availability = false)
-    {
-        if (newNode != null)
-        {
-            newNode.ToggleAvailable(availability);
-            return true;
-        }
-        else
-            return false;
-            
-    }*/
-    /*public bool ToggleNodeAvailability(int xVal, int zVal, bool availability = false)
-    {
-        Node newNode = LookUpNode(xVal, zVal);
-        if (newNode != null)
-        {
-            newNode.ToggleAvailable(availability);
-            return true;
-        }
-        else
-            return false;
-    }*/
 }

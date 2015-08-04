@@ -8,8 +8,8 @@ public class NodeCluster
     public int xVal=0;
     public int yVal = 0;
     public int zVal=0;
-    private int clusterSize;
-    private AbstractGrid mainAbstractGrid;
+    public int clusterSize;
+    public AbstractGrid mainAbstractGrid;
 
     public List<Node> nodeList = new List<Node>();
     public Dictionary<int,List<Node>> storedPathsDictionary = new Dictionary<int,List<Node>>();
@@ -20,8 +20,16 @@ public class NodeCluster
     public Vector3 cubeCoordinates;
     public Vector3 sphereCoordinates;
 
+    public Vector3 centerGridCoordinates;
+    public Vector3 centerCubeCoordinates;
+    public Vector3 centerSphereCoordinates;
+
     public NodeCluster(AbstractGrid newAbstractGrid, int newSize, Vector3 gridLocation, Vector3 cubeLocation, Vector3 sphereLocation)
     {
+
+        clusterSize = newSize;
+        mainAbstractGrid = newAbstractGrid;
+
         xVal = (int)gridLocation.x;
         yVal = (int)gridLocation.y;
         zVal = (int)gridLocation.z;
@@ -30,8 +38,11 @@ public class NodeCluster
         cubeCoordinates = cubeLocation;
         sphereCoordinates = sphereLocation;
 
-        clusterSize = newSize;
-        mainAbstractGrid = newAbstractGrid;
+        Node centerNode = mainAbstractGrid.mainGrid.LookUpNode(gridLocation.x + clusterSize / 2, gridLocation.z + clusterSize / 2);
+        centerGridCoordinates = centerNode.gridCoordinates;
+        centerCubeCoordinates = SphereGrid.GridToCubeCoordinates(centerNode);
+        centerSphereCoordinates = SphereGrid.CubeToSphereCoordinates(centerCubeCoordinates);
+        
 
     }
     
