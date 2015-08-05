@@ -146,11 +146,13 @@ public class GridAgent : MonoBehaviour
             {
                 if (currentNode != null)
                 {
+                    
+                    Vector3 upVector = (planet.gameObject.transform.position - transform.position).normalized;
+                    Vector3 forwardVector = (currentNode.sphereCoordinates - transform.position).normalized;
+                    rB.rotation = OrientUnitToGround(forwardVector);
+
                     Vector3 newDirection = ((currentNode.sphereCoordinates - transform.position).normalized);
                     rB.MovePosition(transform.position + newDirection * movementSpeed * Time.deltaTime);
-                    //Quaternion newRotation = Quaternion.LookRotation(newDirection);
-                    //Quaternion newSmoothRotation = Quaternion.Slerp(transform.rotation, newRotation, rotationSpeed * Time.deltaTime);
-                    //rB.MoveRotation(newSmoothRotation);
 
                     //waitCounter = 0;
                 }
@@ -170,6 +172,32 @@ public class GridAgent : MonoBehaviour
                 }
             }
         }*/
+    }
+    public Quaternion OrientUnitToGround(Vector3 newForward)
+    {
+        Quaternion newRotation = rB.rotation;
+        Vector3 normalVector = GetGroundNormal();
+        if (newForward.magnitude > 0.1f && normalVector.magnitude > 0.1f)
+        {
+            Quaternion lookQuat = Quaternion.LookRotation(newForward, transform.up);
+            Quaternion normalQuat = Quaternion.FromToRotation(transform.up, normalVector);
+            Quaternion lookRotation = normalQuat * lookQuat;
+
+            newRotation = Quaternion.LookRotation(newForward, normalVector);
+        }
+        return newRotation;
+    }
+    public Vector3 GetGroundNormal()
+    {
+        RaycastHit hit;
+        Vector3 normal = (planet.gameObject.transform.position - transform.position).normalized;
+
+        if (Physics.Raycast(transform.position/* + transform.up*/, -transform.up, out hit))
+        {
+            if (hit.collider.gameObject.GetComponent<MeshCollider>())
+                normal = hit.normal;
+        }
+        return normal;
     }
     private void ExecuteMove()
     {
