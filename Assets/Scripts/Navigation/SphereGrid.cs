@@ -24,9 +24,6 @@ public class SphereGrid : MonoBehaviour
     public GameObject locationPrefab;
     public GameObject nodeClusterVisual;
 
-    private GridAgent agent;
-    public GameObject agentPrefab;
-
     public MeshGenerator meshGen_BackFace;
     public MeshGenerator meshGen_FrontFace;
     public MeshGenerator meshGen_TopFace;
@@ -36,59 +33,14 @@ public class SphereGrid : MonoBehaviour
 
     private Node startNode;
     private Node endNode;
-    private int index = 0;
     private List<Node> mainPath = new List<Node>();
+
+    public Node targetNode;
 
 	void Start () 
     {
         InitializeGrid();
-        
 	}
-    void Update()
-    {
-        
-        if (Input.GetMouseButtonDown(0))
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit))
-            {
-                
-                if (hit.collider.gameObject.GetComponent<MeshCollider>())
-                {
-                    
-                    Node newNode = GetClosestNode(hit.point);
-                    SpawnNodeVisual(newNode.sphereCoordinates);
-                    SpawnLocationVisual(hit.point);
-
-                    if (startNode == null)
-                    {
-                        startNode = newNode;
-                    }
-                    else if (endNode == null)
-                    {
-                        endNode = newNode;
-
-                        mainPath = FindSpherePath(startNode, endNode);
-                        for (int i = 0; i < mainPath.Count; i++)
-                        {
-                            SpawnNodeVisual(mainPath[i].sphereCoordinates);
-                        }
-                        startNode = null;
-                        endNode = null;
-                    }
-                    
-                }
-            }
-        }
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            SpawnNodeVisual(mainPath[index].sphereCoordinates);
-            if(index<mainPath.Count-1)
-                index++;
-        }
-        
-    }
     private void InitializeGrid()
     {
         CreateGrids();
@@ -96,6 +48,8 @@ public class SphereGrid : MonoBehaviour
         SetConnectionNodeNeighbors();
         SetConnections();
         CreateSurface();
+
+        
     }
     public static Vector3 GridToCubeCoordinates(Node newNode)
     {
@@ -174,8 +128,10 @@ public class SphereGrid : MonoBehaviour
         return newPoint;
     }
     //NEEDS REFINEMENT
-    /*public static Vector3 RawSphereCoordinateToRawCubeCoordinate(Vector3 sphereCoordinate)
+    public Grid RawSphereCoordinateToGrid(Vector3 sphereCoordinate)
     {
+        sphereCoordinate *= .01f;
+        
         Vector3 position = new Vector3(sphereCoordinate.x,sphereCoordinate.y,sphereCoordinate.z);
 
         double x, y, z;
@@ -216,13 +172,15 @@ public class SphereGrid : MonoBehaviour
             {
                 //top face
                 position.y = 1.0f;
-                return position;
+                //return position;
+                return gridDictionary[Orientation.Top];
             }
             else
             {
                 //bottom face
                 position.y = -1.0f;
-                return position;
+                //return position;
+                return gridDictionary[Orientation.Bottom];
             }
         }
         else if (fx >= fy && fx >= fz)
@@ -251,13 +209,15 @@ public class SphereGrid : MonoBehaviour
             {
                 //right face
                 position.x = 1.0f;
-                return position;
+                //return position;
+                return gridDictionary[Orientation.Right];
             }
             else
             {
                 //left face
                 position.x = -1.0f;
-                return position;
+                //return position;
+                return gridDictionary[Orientation.Left];
             }
         }
         else
@@ -286,21 +246,23 @@ public class SphereGrid : MonoBehaviour
             {
                 //front face
                 position.z = 1.0f;
-                return position;
+                //return position;
+                return gridDictionary[Orientation.Back];
             }
             else
             {
                 //back face
                 position.z = -1.0f;
-                return position;
+                //return position;
+                return gridDictionary[Orientation.Front];
             }
         }
-    }*/
-    private void SpawnNodeVisual(Vector3 newLocation)
+    }
+    public void SpawnNodeVisual(Vector3 newLocation)
     {
         GameObject newVisual = Instantiate(nodeVisual, newLocation, Quaternion.identity) as GameObject;
     }
-    private void SpawnLocationVisual(Vector3 newLocation)
+    public void SpawnLocationVisual(Vector3 newLocation)
     {
         GameObject newVisual = Instantiate(locationPrefab, newLocation, Quaternion.identity) as GameObject;
     }
@@ -389,9 +351,9 @@ public class SphereGrid : MonoBehaviour
         }
         meshGen_LeftFace.gameObject.AddComponent<MeshCollider>();
     }
-    private Node GetClosestNode(Vector3 newLocation)
+    public Node GetClosestNode(Vector3 newLocation)
     {
-        Grid newGrid = GetGridFrontLocationOnSphere(newLocation);
+        Grid newGrid = RawSphereCoordinateToGrid(newLocation);//GetGridFrontLocationOnSphere(newLocation);
         NodeCluster newCluster = GetNodeClusterFromGridAndLocation(newLocation, newGrid);
         Node newNode = GetNodeFromNodeClusterAndLocation(newLocation, newCluster);
         return newNode;
@@ -521,7 +483,10 @@ public class SphereGrid : MonoBehaviour
             }
             
         }
-        
+        if (newGrid == null)
+        {
+            Debug.LogError("Could Not Find Grid!");
+        }
         return newGrid;
     }
     private NodeCluster GetNodeClusterFromGridAndLocation(Vector3 newLocation, Grid newGrid)
